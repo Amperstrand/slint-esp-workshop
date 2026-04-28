@@ -1,0 +1,18 @@
+# Copyright © SixtyFPS GmbH <info@slint.dev>
+# SPDX-License-Identifier: MIT
+
+# Settings for LilyGo T-Display S3 board (non-touch variant)
+# Reference: https://github.com/Xinyuan-LilyGO/T-Display-S3
+
+[env]
+ESP_LOG = "INFO"
+
+[target.xtensa-esp32s3-none-elf]
+runner = "espflash flash --chip esp32s3 --monitor"
+rustflags = ["-C", "link-arg=-Wl,-Tlinkall.x"]
+
+[build]
+target = "xtensa-esp32s3-none-elf"
+
+[unstable]
+build-std = ["core", "alloc"]

@@ -1,0 +1,749 @@
+// T-Display S3 — 7-page Slint demo showcasing UI capabilities.
+//
+// FONT QUALITY NOTE: Bitmap fonts on this 170px-tall RGB565 display produce
+// characters that are only 6-12 pixels tall at typical sizes. This is a
+// fundamental limitation of the display resolution, not a Slint bug.
+// SDF fonts were tried (.with_sdf_fonts(true)) but produced WORSE results
+// on this small screen — Slint docs confirm "Rendering is slower and may
+// result in slightly inferior visual output." Reverted to bitmap.
+// SLINT_FONT_SIZES=10,12,14,16,18,20,22 env var pre-renders exact pixel
+// sizes for crisp text. Future improvement: try importing a custom pixel
+// font optimized for small displays, or bump to a higher-res panel.
+//
+// DARK MODE NOTE: Light-on-dark text appears thinner than dark-on-light
+// due to anti-aliasing pixels blending toward invisible black. Mitigated
+// by using brighter dark-mode colors (#dddddd+) and heavier font weights
+// (600+) throughout. Pure #ffffff on #000000 gives 21:1 contrast (WCAG AAA).
+
+import { VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+    title: "T-Display S3";
+
+    in-out property <bool> dark-mode: false;
+    in-out property <bool> led-on: false;
+    in-out property <int> battery-mv: -1;
+    in-out property <int> page: 0;
+    in property <int> tick: 0;
+
+    preferred-width: 320px;
+    preferred-height: 170px;
+
+    background: dark-mode ? #000000 : #ffffff;
+
+    // ====== PAGE 0: Status Dashboard ======
+    if page == 0 : Rectangle {
+        VerticalLayout {
+            padding: 6px;
+            spacing: 4px;
+
+            Text {
+                text: "Status Dashboard";
+                font-size: 20px;
+                font-weight: 700;
+                color: dark-mode ? #ffffff : #000000;
+            }
+
+            HorizontalLayout {
+                spacing: 6px;
+
+                Text {
+                    text: "Mode:";
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: dark-mode ? #dddddd : #222222;
+                }
+
+                Rectangle {
+                    height: 18px;
+                    width: 80px;
+                    border-radius: 9px;
+                    background: dark-mode ? #1a1a2e : #e8e8ff;
+
+                    Text {
+                        text: dark-mode ? "DARK" : "LIGHT";
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: dark-mode ? #ffd700 : #3333aa;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Rectangle {
+                    width: 14px;
+                    height: 14px;
+                    border-radius: 7px;
+                    background: led-on ? #00dd44 : (dark-mode ? #333333 : #cccccc);
+                    border-width: 1px;
+                    border-color: dark-mode ? #555555 : #999999;
+                }
+
+                Text {
+                    text: "LED";
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: led-on ? #00dd44 : (dark-mode ? #888888 : #999999);
+                }
+            }
+
+            Rectangle { vertical-stretch: 1; }
+
+            HorizontalLayout {
+                spacing: 6px;
+                alignment: center;
+
+                Text {
+                    text: "BAT";
+                    font-size: 14px;
+                    font-weight: 700;
+                    color: dark-mode ? #dddddd : #222222;
+                }
+
+                Rectangle {
+                    height: 18px;
+                    width: 90px;
+                    border-radius: 3px;
+                    border-width: 1px;
+                    border-color: dark-mode ? #aaaaaa : #777777;
+                    background: dark-mode ? #1a1a1a : #eeeeee;
+                    clip: true;
+
+                    Rectangle {
+                        width: battery-mv > 0
+                            ? min(parent.width, max(0px, parent.width * (battery-mv - 3000) / 1200))
+                            : 0px;
+                        height: 100%;
+                        background: battery-mv > 3600 ? #00dd44 : battery-mv > 3300 ? #ffaa00 : #ff3333;
+                    }
+
+                    Text {
+                        text: battery-mv < 0 ? "N/C" : (battery-mv / 1000) + "." + Math.abs(Math.mod(battery-mv, 1000)) / 100 + "V";
+                        font-size: 12px;
+                        font-weight: 600;
+                        color: dark-mode ? #ffffff : #000000;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            Text {
+                text: "BOOT=theme  BTN2=next page";
+                font-size: 12px;
+                color: dark-mode ? #aaaaaa : #777777;
+                horizontal-alignment: center;
+            }
+        }
+    }
+
+    // ====== PAGE 1: Typography ======
+    if page == 1 : Rectangle {
+        VerticalLayout {
+            padding: 6px;
+            spacing: 1px;
+
+            Text {
+                text: "Typography";
+                font-size: 20px;
+                font-weight: 700;
+                color: dark-mode ? #ffffff : #000000;
+            }
+
+            Text { text: "Bold 18px: ABC abc 0123"; font-size: 18px; font-weight: 700; color: dark-mode ? #ffffff : #000000; }
+            Text { text: "Semi 16px: ABC abc 0123"; font-size: 16px; font-weight: 600; color: dark-mode ? #dddddd : #222222; }
+            Text { text: "Regular 14px: ABC abc"; font-size: 14px; font-weight: 600; color: dark-mode ? #cccccc : #444444; }
+            Text { text: "Light 12px: abc 0123"; font-size: 12px; font-weight: 600; color: dark-mode ? #bbbbbb : #555555; }
+
+            Rectangle { vertical-stretch: 1; }
+
+            HorizontalLayout {
+                alignment: center;
+                spacing: 8px;
+
+                Text { text: "Aa"; font-size: 18px; font-weight: 700; color: dark-mode ? #ff6666 : #cc0000; }
+                Text { text: "Bb"; font-size: 18px; font-weight: 600; color: dark-mode ? #66ff66 : #00aa00; }
+                Text { text: "Cc"; font-size: 18px; font-weight: 700; color: dark-mode ? #6666ff : #0000cc; }
+                Text { text: "Dd"; font-size: 18px; font-weight: 600; color: dark-mode ? #ffff66 : #aaaa00; }
+                Text { text: "Ee"; font-size: 18px; font-weight: 700; color: dark-mode ? #ff66ff : #aa00aa; }
+            }
+
+            Text {
+                text: "[2/7]";
+                font-size: 12px;
+                color: dark-mode ? #aaaaaa : #777777;
+                horizontal-alignment: right;
+            }
+        }
+    }
+
+    // ====== PAGE 2: Animations ======
+    if page == 2 : Rectangle {
+        VerticalLayout {
+            padding: 6px;
+            spacing: 6px;
+
+            Text {
+                text: "Animations";
+                font-size: 20px;
+                font-weight: 700;
+                color: dark-mode ? #ffffff : #000000;
+            }
+
+            Rectangle {
+                height: 20px;
+                border-radius: 6px;
+                background: dark-mode ? #1a1a1a : #dddddd;
+                clip: true;
+
+                Rectangle {
+                    width: parent.width * Math.mod(tick, 100) / 100;
+                    height: 100%;
+                    background: dark-mode ? #0066ff : #0055cc;
+                    animate width { duration: 300ms; easing: ease-in-out; }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 12px;
+                alignment: center;
+
+                Rectangle {
+                    width: 28px; height: 28px; border-radius: 14px;
+                    background: Math.mod(tick, 6) == 0 ? #ff0000 : Math.mod(tick, 6) == 1 ? #ff8800 : Math.mod(tick, 6) == 2 ? #ffff00 : Math.mod(tick, 6) == 3 ? #00cc00 : Math.mod(tick, 6) == 4 ? #0088ff : #cc00ff;
+                    animate background { duration: 400ms; }
+                }
+
+                Rectangle {
+                    width: 28px; height: 28px; border-radius: 14px;
+                    background: Math.mod(tick + 1, 6) == 0 ? #ff0000 : Math.mod(tick + 1, 6) == 1 ? #ff8800 : Math.mod(tick + 1, 6) == 2 ? #ffff00 : Math.mod(tick + 1, 6) == 3 ? #00cc00 : Math.mod(tick + 1, 6) == 4 ? #0088ff : #cc00ff;
+                    animate background { duration: 400ms; }
+                }
+
+                Rectangle {
+                    width: 28px; height: 28px; border-radius: 14px;
+                    background: Math.mod(tick + 2, 6) == 0 ? #ff0000 : Math.mod(tick + 2, 6) == 1 ? #ff8800 : Math.mod(tick + 2, 6) == 2 ? #ffff00 : Math.mod(tick + 2, 6) == 3 ? #00cc00 : Math.mod(tick + 2, 6) == 4 ? #0088ff : #cc00ff;
+                    animate background { duration: 400ms; }
+                }
+            }
+
+            HorizontalLayout {
+                height: 20px;
+                spacing: 4px;
+
+                Rectangle {
+                    width: 64px; height: 100%;
+                    background: dark-mode ? #4488ff : #0044cc;
+                    opacity: 1.0 - Math.abs((Math.mod(tick, 24) - 12)) / 12.0;
+                }
+
+                Rectangle {
+                    width: 64px; height: 100%;
+                    background: dark-mode ? #44dd66 : #008833;
+                    opacity: 1.0 - Math.abs((Math.mod(tick + 12, 24) - 12)) / 12.0;
+                }
+
+                Rectangle {
+                    width: 64px; height: 100%;
+                    background: dark-mode ? #ff6644 : #cc2200;
+                    opacity: 1.0 - Math.abs((Math.mod(tick + 18, 24) - 12)) / 12.0;
+                }
+
+                Rectangle {
+                    width: 64px; height: 100%;
+                    background: dark-mode ? #ffcc22 : #cc9900;
+                    opacity: 1.0 - Math.abs((Math.mod(tick + 6, 24) - 12)) / 12.0;
+                }
+            }
+
+            Text {
+                text: "[3/7]";
+                font-size: 12px;
+                color: dark-mode ? #aaaaaa : #777777;
+                horizontal-alignment: right;
+            }
+        }
+    }
+
+    // ====== PAGE 3: Colors & Shapes ======
+    if page == 3 : Rectangle {
+        VerticalLayout {
+            padding: 6px;
+            spacing: 4px;
+
+            Text {
+                text: "Colors & Shapes";
+                font-size: 20px;
+                font-weight: 700;
+                color: dark-mode ? #ffffff : #000000;
+            }
+
+            HorizontalLayout {
+                spacing: 3px;
+
+                Rectangle { width: 32px; height: 28px; border-radius: 4px; background: #ff0000; border-width: 1px; border-color: dark-mode ? #444444 : #bbbbbb; }
+                Rectangle { width: 32px; height: 28px; border-radius: 4px; background: #ff8800; border-width: 1px; border-color: dark-mode ? #444444 : #bbbbbb; }
+                Rectangle { width: 32px; height: 28px; border-radius: 4px; background: #ffff00; border-width: 1px; border-color: dark-mode ? #444444 : #bbbbbb; }
+                Rectangle { width: 32px; height: 28px; border-radius: 4px; background: #00cc00; border-width: 1px; border-color: dark-mode ? #444444 : #bbbbbb; }
+                Rectangle { width: 32px; height: 28px; border-radius: 4px; background: #0088ff; border-width: 1px; border-color: dark-mode ? #444444 : #bbbbbb; }
+                Rectangle { width: 32px; height: 28px; border-radius: 4px; background: #0000ff; border-width: 1px; border-color: dark-mode ? #444444 : #bbbbbb; }
+                Rectangle { width: 32px; height: 28px; border-radius: 4px; background: #cc00ff; border-width: 1px; border-color: dark-mode ? #444444 : #bbbbbb; }
+                Rectangle { width: 32px; height: 28px; border-radius: 4px; background: #ffffff; border-width: 1px; border-color: dark-mode ? #444444 : #bbbbbb; }
+            }
+
+            Text {
+                text: "Border Radius";
+                font-size: 14px;
+                font-weight: 600;
+                color: dark-mode ? #dddddd : #222222;
+            }
+
+            HorizontalLayout {
+                spacing: 6px;
+                alignment: center;
+
+                Rectangle { width: 40px; height: 40px; background: dark-mode ? #0066ff : #0055cc; border-radius: 0px; }
+                Rectangle { width: 40px; height: 40px; background: dark-mode ? #0088ff : #0066dd; border-radius: 6px; }
+                Rectangle { width: 40px; height: 40px; background: dark-mode ? #00aaff : #0088ff; border-radius: 12px; }
+                Rectangle { width: 40px; height: 40px; background: dark-mode ? #00ccff : #00aaff; border-radius: 20px; }
+            }
+
+            Text {
+                text: "Borders";
+                font-size: 14px;
+                font-weight: 600;
+                color: dark-mode ? #dddddd : #222222;
+            }
+
+            HorizontalLayout {
+                spacing: 6px;
+                alignment: center;
+
+                Rectangle { width: 56px; height: 30px; background: transparent; border-width: 1px; border-color: dark-mode ? #ffffff : #000000; }
+                Rectangle { width: 56px; height: 30px; background: transparent; border-width: 2px; border-color: dark-mode ? #ff4444 : #cc0000; }
+                Rectangle { width: 56px; height: 30px; background: dark-mode ? #001a33 : #cce0ff; border-width: 2px; border-color: dark-mode ? #0088ff : #0066cc; border-radius: 4px; }
+            }
+
+            Text {
+                text: "[4/7]";
+                font-size: 12px;
+                color: dark-mode ? #aaaaaa : #777777;
+                horizontal-alignment: right;
+            }
+        }
+    }
+
+    // ====== PAGE 4: Gauges & Progress ======
+    if page == 4 : Rectangle {
+        VerticalLayout {
+            padding: 6px;
+            spacing: 6px;
+
+            Text {
+                text: "Gauges & Bars";
+                font-size: 20px;
+                font-weight: 700;
+                color: dark-mode ? #ffffff : #000000;
+            }
+
+            // Gauge: CPU
+            HorizontalLayout {
+                spacing: 6px;
+
+                Text {
+                    text: "CPU";
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: dark-mode ? #dddddd : #222222;
+                    width: 40px;
+                }
+
+                Rectangle {
+                    height: 16px;
+                    border-radius: 4px;
+                    background: dark-mode ? #1a1a1a : #dddddd;
+                    clip: true;
+
+                    Rectangle {
+                        width: parent.width * Math.mod(tick, 100) / 100;
+                        height: 100%;
+                        background: #ff4444;
+                        animate width { duration: 400ms; easing: ease-in-out; }
+                    }
+                }
+            }
+
+            // Gauge: MEM
+            HorizontalLayout {
+                spacing: 6px;
+
+                Text {
+                    text: "MEM";
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: dark-mode ? #dddddd : #222222;
+                    width: 40px;
+                }
+
+                Rectangle {
+                    height: 16px;
+                    border-radius: 4px;
+                    background: dark-mode ? #1a1a1a : #dddddd;
+                    clip: true;
+
+                    Rectangle {
+                        width: parent.width * Math.mod(tick + 30, 100) / 100;
+                        height: 100%;
+                        background: #ffaa00;
+                        animate width { duration: 400ms; easing: ease-in-out; }
+                    }
+                }
+            }
+
+            // Gauge: NET
+            HorizontalLayout {
+                spacing: 6px;
+
+                Text {
+                    text: "NET";
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: dark-mode ? #dddddd : #222222;
+                    width: 40px;
+                }
+
+                Rectangle {
+                    height: 16px;
+                    border-radius: 4px;
+                    background: dark-mode ? #1a1a1a : #dddddd;
+                    clip: true;
+
+                    Rectangle {
+                        width: parent.width * Math.mod(tick + 60, 100) / 100;
+                        height: 100%;
+                        background: #00cc44;
+                        animate width { duration: 400ms; easing: ease-in-out; }
+                    }
+                }
+            }
+
+            Rectangle { vertical-stretch: 1; }
+
+            Text {
+                text: "Stacked Bar";
+                font-size: 14px;
+                font-weight: 600;
+                color: dark-mode ? #dddddd : #222222;
+            }
+
+            Rectangle {
+                height: 24px;
+                border-radius: 4px;
+                clip: true;
+                background: dark-mode ? #1a1a1a : #dddddd;
+
+                HorizontalLayout {
+                    Rectangle { width: 25%; height: 100%; background: #ff4444; }
+                    Rectangle { width: 20%; height: 100%; background: #ffaa00; }
+                    Rectangle { width: 15%; height: 100%; background: #44cc44; }
+                    Rectangle { width: 10%; height: 100%; background: #4488ff; }
+                }
+            }
+
+            Text {
+                text: "[5/7]";
+                font-size: 12px;
+                color: dark-mode ? #aaaaaa : #777777;
+                horizontal-alignment: right;
+            }
+        }
+    }
+
+    // ====== PAGE 5: Cards & Layout ======
+    if page == 5 : Rectangle {
+        VerticalLayout {
+            padding: 4px;
+            spacing: 4px;
+
+            Text {
+                text: "Cards & Layout";
+                font-size: 20px;
+                font-weight: 700;
+                color: dark-mode ? #ffffff : #000000;
+            }
+
+            HorizontalLayout {
+                spacing: 6px;
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                    border-radius: 6px;
+                    border-width: 1px;
+                    border-color: dark-mode ? #555555 : #cccccc;
+                    background: dark-mode ? #0d0d1e : #f8f8ff;
+
+                    VerticalLayout {
+                        padding: 6px;
+                        spacing: 4px;
+
+                        Text {
+                            text: "Sensor A";
+                            font-size: 14px;
+                            font-weight: 700;
+                            color: dark-mode ? #ffffff : #000000;
+                        }
+
+                        Text {
+                            text: "25.4 C";
+                            font-size: 22px;
+                            font-weight: 700;
+                            color: dark-mode ? #66bbff : #0066cc;
+                        }
+
+                        Text {
+                            text: "Normal";
+                            font-size: 12px;
+                            font-weight: 700;
+                            color: dark-mode ? #66dd66 : #009900;
+                        }
+                    }
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                    border-radius: 6px;
+                    border-width: 1px;
+                    border-color: dark-mode ? #555555 : #cccccc;
+                    background: dark-mode ? #0d1a0d : #f8fff8;
+
+                    VerticalLayout {
+                        padding: 6px;
+                        spacing: 4px;
+
+                        Text {
+                            text: "Sensor B";
+                            font-size: 14px;
+                            font-weight: 700;
+                            color: dark-mode ? #ffffff : #000000;
+                        }
+
+                        Text {
+                            text: "68 %";
+                            font-size: 22px;
+                            font-weight: 700;
+                            color: dark-mode ? #ffbb55 : #cc7700;
+                        }
+
+                        Text {
+                            text: "Warning";
+                            font-size: 12px;
+                            font-weight: 700;
+                            color: dark-mode ? #ffbb33 : #cc8800;
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 24px;
+                border-radius: 4px;
+                background: dark-mode ? #1a1a2e : #eeeeff;
+
+                HorizontalLayout {
+                    padding-left: 8px;
+                    padding-right: 8px;
+                    alignment: space-between;
+
+                    Text {
+                        text: "Uptime: 12:34";
+                        font-size: 12px;
+                        font-weight: 600;
+                        color: dark-mode ? #ccccdd : #333399;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        text: "Heap: 92 KB";
+                        font-size: 12px;
+                        font-weight: 600;
+                        color: dark-mode ? #ccccdd : #333399;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            Text {
+                text: "[6/7]";
+                font-size: 12px;
+                color: dark-mode ? #aaaaaa : #777777;
+                horizontal-alignment: right;
+            }
+        }
+    }
+
+    // ====== PAGE 6: Visual States ======
+    if page == 6 : Rectangle {
+        VerticalLayout {
+            padding: 6px;
+            spacing: 6px;
+
+            Text {
+                text: "Visual States";
+                font-size: 20px;
+                font-weight: 700;
+                color: dark-mode ? #ffffff : #000000;
+            }
+
+            Text {
+                text: "Toggles";
+                font-size: 14px;
+                font-weight: 600;
+                color: dark-mode ? #dddddd : #222222;
+            }
+
+            HorizontalLayout {
+                spacing: 12px;
+                alignment: center;
+
+                HorizontalLayout {
+                    spacing: 4px;
+
+                    Text {
+                        text: "WiFi";
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: dark-mode ? #dddddd : #222222;
+                    }
+
+                    Rectangle {
+                        width: 36px;
+                        height: 20px;
+                        border-radius: 10px;
+                        background: dark-mode ? #0066ff : #0055cc;
+
+                        Rectangle {
+                            width: 16px;
+                            height: 16px;
+                            border-radius: 8px;
+                            background: #ffffff;
+                            x: 18px;
+                            y: 2px;
+                        }
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 4px;
+
+                    Text {
+                        text: "BT";
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: dark-mode ? #dddddd : #222222;
+                    }
+
+                    Rectangle {
+                        width: 36px;
+                        height: 20px;
+                        border-radius: 10px;
+                        background: dark-mode ? #555555 : #bbbbbb;
+
+                        Rectangle {
+                            width: 16px;
+                            height: 16px;
+                            border-radius: 8px;
+                            background: #ffffff;
+                            x: 2px;
+                            y: 2px;
+                        }
+                    }
+                }
+            }
+
+            Text {
+                text: "Button States";
+                font-size: 14px;
+                font-weight: 600;
+                color: dark-mode ? #dddddd : #222222;
+            }
+
+            HorizontalLayout {
+                spacing: 6px;
+                alignment: center;
+
+                Rectangle {
+                    width: 56px;
+                    height: 28px;
+                    border-radius: 4px;
+                    background: dark-mode ? #0066ff : #0055cc;
+
+                    Text {
+                        text: "Normal";
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: #ffffff;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Rectangle {
+                    width: 56px;
+                    height: 28px;
+                    border-radius: 4px;
+                    background: dark-mode ? #3388ff : #3377ee;
+
+                    Text {
+                        text: "Hover";
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: #ffffff;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Rectangle {
+                    width: 56px;
+                    height: 28px;
+                    border-radius: 4px;
+                    background: dark-mode ? #0044cc : #003399;
+
+                    Text {
+                        text: "Press";
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: #ffffff;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Rectangle {
+                    width: 56px;
+                    height: 28px;
+                    border-radius: 4px;
+                    background: dark-mode ? #333333 : #cccccc;
+
+                    Text {
+                        text: "Off";
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: dark-mode ? #777777 : #888888;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            Rectangle { vertical-stretch: 1; }
+
+            Text {
+                text: "[7/7]";
+                font-size: 12px;
+                color: dark-mode ? #aaaaaa : #777777;
+                horizontal-alignment: right;
+            }
+        }
+    }
+}
