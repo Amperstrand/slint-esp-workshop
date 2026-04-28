@@ -1,0 +1,9 @@
+[target.xtensa-esp32-none-elf]
+runner = "espflash flash --chip esp32 --monitor"
+rustflags = ["-C", "link-arg=-Wl,-Tlinkall.x"]
+
+[build]
+target = "xtensa-esp32-none-elf"
+
+[unstable]
+build-std = ["core", "alloc"]
