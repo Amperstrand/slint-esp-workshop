@@ -1,0 +1,128 @@
+import { Button } from "std-widgets.slint";
+
+export global HardwareGlobals {
+    in-out property <int> page: 0;
+    in-out property <bool> dark-mode: false;
+    in property <int> tick: 0;
+    in property <bool> button-a: false;
+    in property <bool> button-b: false;
+    in property <bool> button-c: false;
+
+    out property <color> bg: dark-mode ? #0a0a12 : #f0f0f0;
+    out property <color> surface: dark-mode ? #121624 : #ffffff;
+    out property <color> text-primary: dark-mode ? #ffffff : #000000;
+    out property <color> text-secondary: dark-mode ? #b7c0d8 : #4d5a73;
+    out property <color> accent: dark-mode ? #00ddff : #0066cc;
+    out property <color> divider: dark-mode ? #1a2a3a : #cccccc;
+    out property <color> footer-bg: dark-mode ? #111122 : #e8e8f0;
+    out property <color> muted: dark-mode ? #556070 : #8a8f99;
+
+    callback page-changed(int);
+}
+
+component InfoText inherits Text {
+    font-size: 14px;
+    color: HardwareGlobals.text-primary;
+}
+
+export component MainWindow inherits Window {
+    width: 320px;
+    height: 240px;
+    background: HardwareGlobals.bg;
+
+    VerticalLayout {
+        spacing: 0px;
+
+        if HardwareGlobals.page == 0 : Rectangle {
+            vertical-stretch: 1;
+            background: HardwareGlobals.bg;
+
+            VerticalLayout {
+                padding: 16px;
+                spacing: 8px;
+
+                Text { text: "M5Stack Core"; font-size: 22px; font-weight: 700; color: HardwareGlobals.text-primary; }
+                Text { text: "Status Dashboard"; font-size: 14px; color: HardwareGlobals.accent; }
+                Rectangle { height: 1px; background: HardwareGlobals.divider; }
+                InfoText { text: "Mode: " + (HardwareGlobals.dark-mode ? "Dark" : "Light"); }
+                InfoText { text: "Page: " + HardwareGlobals.page + "/2"; }
+                Text { text: "Tick: " + HardwareGlobals.tick; font-size: 12px; color: HardwareGlobals.muted; }
+                Text { text: "Buttons:"; font-size: 14px; font-weight: 600; color: HardwareGlobals.text-primary; }
+                HorizontalLayout {
+                    spacing: 12px;
+                    Text { text: "A:" + (HardwareGlobals.button-a ? "ON" : "off"); font-size: 12px; color: HardwareGlobals.accent; }
+                    Text { text: "B:" + (HardwareGlobals.button-b ? "ON" : "off"); font-size: 12px; color: HardwareGlobals.accent; }
+                    Text { text: "C:" + (HardwareGlobals.button-c ? "ON" : "off"); font-size: 12px; color: HardwareGlobals.accent; }
+                }
+                Rectangle { vertical-stretch: 1; }
+                Text { text: "A=Prev  B=Next  C=Dark"; font-size: 12px; color: HardwareGlobals.text-secondary; horizontal-alignment: center; }
+            }
+        }
+
+        if HardwareGlobals.page == 1 : Rectangle {
+            vertical-stretch: 1;
+            background: HardwareGlobals.bg;
+
+            VerticalLayout {
+                padding: 16px;
+                spacing: 10px;
+
+                Text { text: "Colors & Shapes"; font-size: 22px; font-weight: 700; color: HardwareGlobals.text-primary; }
+                Text { text: "ILI9342C panel demo"; font-size: 14px; color: HardwareGlobals.accent; }
+                Rectangle { height: 1px; background: HardwareGlobals.divider; }
+                HorizontalLayout {
+                    spacing: 10px;
+                    Rectangle { width: 56px; height: 56px; border-radius: 10px; background: #ff5b5b; }
+                    Rectangle { width: 56px; height: 56px; border-radius: 10px; background: #ffd84d; }
+                    Rectangle { width: 56px; height: 56px; border-radius: 10px; background: #34d399; }
+                    Rectangle { width: 56px; height: 56px; border-radius: 10px; background: #38bdf8; }
+                }
+                HorizontalLayout {
+                    spacing: 12px;
+                    Rectangle { width: 70px; height: 36px; border-radius: 0px; background: HardwareGlobals.surface; border-width: 2px; border-color: HardwareGlobals.accent; }
+                    Rectangle { width: 70px; height: 36px; border-radius: 8px; background: HardwareGlobals.accent; }
+                    Rectangle { width: 70px; height: 36px; border-radius: 18px; background: HardwareGlobals.dark-mode ? #3b82f6 : #111827; }
+                }
+                Text { text: "RGB565 software rendering over SPI"; font-size: 13px; color: HardwareGlobals.text-secondary; }
+                Rectangle { vertical-stretch: 1; }
+            }
+        }
+
+        if HardwareGlobals.page == 2 : Rectangle {
+            vertical-stretch: 1;
+            background: HardwareGlobals.bg;
+
+            VerticalLayout {
+                padding: 16px;
+                spacing: 8px;
+
+                Text { text: "About"; font-size: 22px; font-weight: 700; color: HardwareGlobals.text-primary; }
+                Text { text: "Minimal Slint board port"; font-size: 14px; color: HardwareGlobals.accent; }
+                Rectangle { height: 1px; background: HardwareGlobals.divider; }
+                InfoText { text: "Chip: ESP32-D0WDQ6-V3"; }
+                InfoText { text: "Flash: 16MB / PSRAM: none"; }
+                InfoText { text: "Display: 320x240 ILI9342C"; }
+                InfoText { text: "Buttons: A prev, B next, C dark"; }
+                Text { text: "Tick source: ui_sync_task @ 100ms"; font-size: 12px; color: HardwareGlobals.muted; }
+                Rectangle { vertical-stretch: 1; }
+                Button {
+                    text: "Slint demo ready";
+                    enabled: false;
+                }
+            }
+        }
+
+        Rectangle {
+            height: 24px;
+            background: HardwareGlobals.footer-bg;
+
+            HorizontalLayout {
+                alignment: center;
+                spacing: 16px;
+                Text { text: "◄A"; font-size: 12px; color: HardwareGlobals.accent; vertical-alignment: center; }
+                Text { text: "B►"; font-size: 12px; color: HardwareGlobals.accent; vertical-alignment: center; }
+                Text { text: "C:Dark"; font-size: 12px; color: HardwareGlobals.accent; vertical-alignment: center; }
+            }
+        }
+    }
+}
