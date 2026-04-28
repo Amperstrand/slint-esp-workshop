@@ -1,0 +1,701 @@
+// CYD-3248S035C — 7-page Slint demo with swipe navigation.
+// 320×480 portrait display (ST7796), GT911 capacitive touch, RGB LED.
+// BOOT button: short press = next page, long press = dark mode toggle.
+// Swipe left/right to navigate pages.
+
+export global HardwareGlobals {
+    in-out property <string> led-color: "RED";
+    in property <int> light-value: 0;
+    in property <bool> boot-pressed: false;
+    in-out property <bool> dark-mode: false;
+    in property <string> touch-pos: "idle";
+    in property <int> tap-count: 0;
+    in-out property <int> page: 0;
+    in property <int> tick: 0;
+    out property <color> bg: dark-mode ? #0a0a12 : #f0f0f0;
+    out property <color> surface: dark-mode ? #0d0d1e : #f8f8ff;
+    out property <color> text-primary: dark-mode ? #ffffff : #000000;
+    out property <color> text-secondary: dark-mode ? #bbbbbb : #444444;
+    out property <color> text-muted: dark-mode ? #555555 : #999999;
+    out property <color> accent: dark-mode ? #00ddff : #0066cc;
+    out property <color> divider-color: dark-mode ? #1a2a3a : #cccccc;
+    out property <color> nav-bg: dark-mode ? #111122 : #e8e8f0;
+    out property <color> bar-bg: dark-mode ? #1a1a2a : #dddddd;
+    callback led-color-changed(string);
+    callback page-changed(int);
+}
+
+component ColorButton inherits Rectangle {
+    in property <color> btn-color: black;
+    in property <string> color-name: "";
+    in property <bool> selected: false;
+
+    width: 36px;
+    height: 36px;
+    background: btn-color;
+    border-radius: 6px;
+    border-width: selected ? 3px : 1px;
+    border-color: selected ? HardwareGlobals.accent : #555555;
+
+    TouchArea {
+        clicked => {
+            HardwareGlobals.led-color-changed(root.color-name);
+        }
+    }
+}
+
+component Card inherits Rectangle {
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: HardwareGlobals.divider-color;
+    background: HardwareGlobals.surface;
+}
+
+component SectionTitle inherits Text {
+    font-size: 22px;
+    font-weight: 700;
+    color: HardwareGlobals.text-primary;
+}
+
+component PageHeader inherits VerticalLayout {
+    in property <string> title;
+    spacing: 4px;
+    SectionTitle { text: root.title; }
+    Rectangle { height: 1px; background: HardwareGlobals.divider-color; }
+}
+
+component Label inherits Text {
+    font-size: 15px;
+    font-weight: 600;
+    color: HardwareGlobals.text-secondary;
+}
+
+component Value inherits Text {
+    font-size: 16px;
+    font-weight: 600;
+    color: HardwareGlobals.accent;
+}
+
+component GaugeBar inherits Rectangle {
+    in property <string> label-text: "";
+    in property <float> fill-ratio: 0.5;
+    in property <color> fill-color: #0088ff;
+
+    height: 32px;
+
+    HorizontalLayout {
+        spacing: 8px;
+
+        Text {
+            text: root.label-text;
+            font-size: 15px;
+            font-weight: 700;
+            color: HardwareGlobals.text-secondary;
+            width: 50px;
+            vertical-alignment: center;
+        }
+
+        Rectangle {
+            border-radius: 6px;
+            background: HardwareGlobals.bar-bg;
+            clip: true;
+
+            Rectangle {
+                width: parent.width * root.fill-ratio;
+                height: 100%;
+                background: root.fill-color;
+                animate width { duration: 400ms; easing: ease-in-out; }
+            }
+        }
+    }
+}
+
+export component MainWindow inherits Window {
+    width: 320px;
+    height: 480px;
+    background: HardwareGlobals.bg;
+
+    VerticalLayout {
+        // ====== SWIPE CONTENT AREA ======
+        sgr := SwipeGestureHandler {
+            vertical-stretch: 1;
+            handle-swipe-right: HardwareGlobals.page > 0;
+            handle-swipe-left: HardwareGlobals.page < 6;
+            swiped => {
+                if self.current-position.x > self.pressed-position.x + self.width / 4 {
+                    HardwareGlobals.page -= 1;
+                    HardwareGlobals.page-changed(HardwareGlobals.page);
+                } else if self.current-position.x < self.pressed-position.x - self.width / 4 {
+                    HardwareGlobals.page += 1;
+                    HardwareGlobals.page-changed(HardwareGlobals.page);
+                }
+            }
+
+            HorizontalLayout {
+                property <length> position: - HardwareGlobals.page * root.width;
+                animate position { duration: 250ms; easing: ease-out; }
+                property <length> swipe-offset;
+                x: position + swipe-offset;
+
+                states [
+                    swiping when sgr.swiping : {
+                        swipe-offset: sgr.current-position.x - sgr.pressed-position.x;
+                        out {
+                            animate swipe-offset { duration: 250ms; easing: ease-out; }
+                        }
+                    }
+                ]
+
+                // ====== PAGE 0: Hardware Dashboard ======
+                Rectangle {
+                    width: root.width;
+                    clip: true;
+
+                    VerticalLayout {
+                        padding: 10px;
+                        spacing: 6px;
+
+                        PageHeader { title: "Hardware Dashboard"; }
+
+                        HorizontalLayout {
+                            height: 28px;
+                            Label { text: "Mode:"; width: 90px; vertical-alignment: center; }
+                            Rectangle {
+                                width: 80px;
+                                height: 24px;
+                                border-radius: 12px;
+                                background: HardwareGlobals.dark-mode ? #1a1a2e : #e8e8ff;
+
+                                Text {
+                                    text: HardwareGlobals.dark-mode ? "DARK" : "LIGHT";
+                                    font-size: 13px;
+                                    font-weight: 700;
+                                    color: HardwareGlobals.dark-mode ? #ffd700 : #3333aa;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
+                            Text {
+                                text: " (BOOT btn)";
+                                font-size: 11px;
+                                color: HardwareGlobals.text-muted;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        HorizontalLayout {
+                            height: 28px;
+                            Label { text: "RGB LED:"; width: 90px; vertical-alignment: center; }
+                            Rectangle {
+                                width: 20px;
+                                height: 20px;
+                                border-radius: 10px;
+                                background: HardwareGlobals.led-color == "RED" ? #ff0000 :
+                                            HardwareGlobals.led-color == "GREEN" ? #00ff00 :
+                                            HardwareGlobals.led-color == "BLUE" ? #0000ff :
+                                            HardwareGlobals.led-color == "YELLOW" ? #ffff00 :
+                                            HardwareGlobals.led-color == "CYAN" ? #00ffff :
+                                            HardwareGlobals.led-color == "MAGENTA" ? #ff00ff :
+                                            HardwareGlobals.led-color == "WHITE" ? #ffffff : #333333;
+                            }
+                            Value {
+                                text: " " + HardwareGlobals.led-color;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        HorizontalLayout {
+                            height: 28px;
+                            Label { text: "Light ADC:"; width: 90px; vertical-alignment: center; }
+                            Value { text: HardwareGlobals.light-value + " / 4095"; vertical-alignment: center; }
+                        }
+
+                        Rectangle {
+                            height: 12px;
+                            background: HardwareGlobals.dark-mode ? #0a1a2a : #e0e0e0;
+                            border-radius: 4px;
+
+                            Rectangle {
+                                height: parent.height;
+                                width: parent.width * HardwareGlobals.light-value / 4095;
+                                background: HardwareGlobals.dark-mode ? #007030 : #4caf50;
+                                border-radius: 4px;
+                            }
+                        }
+
+                        HorizontalLayout {
+                            height: 28px;
+                            Label { text: "Boot BTN:"; width: 90px; vertical-alignment: center; }
+                            Text {
+                                text: HardwareGlobals.boot-pressed ? "PRESSED" : "RELEASED";
+                                font-size: 16px;
+                                font-weight: 600;
+                                color: HardwareGlobals.boot-pressed ? #ff4444 : HardwareGlobals.accent;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        HorizontalLayout {
+                            height: 28px;
+                            Label { text: "Touch:"; width: 90px; vertical-alignment: center; }
+                            Value { text: HardwareGlobals.touch-pos; vertical-alignment: center; }
+                        }
+
+                        HorizontalLayout {
+                            height: 28px;
+                            Label { text: "Taps:"; width: 90px; vertical-alignment: center; }
+                            Value { text: HardwareGlobals.tap-count; vertical-alignment: center; }
+                        }
+
+                        Rectangle { vertical-stretch: 1; }
+
+                        Text {
+                            text: "BOOT: tap=page | hold=dark mode";
+                            font-size: 11px;
+                            color: HardwareGlobals.dark-mode ? #334455 : #aaaaaa;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+
+                // ====== PAGE 1: Typography ======
+                Rectangle {
+                    width: root.width;
+                    clip: true;
+
+                    VerticalLayout {
+                        padding: 10px;
+                        spacing: 6px;
+
+                        PageHeader { title: "Typography"; }
+
+                        Text { text: "Bold 24px: ABC abc 0123"; font-size: 24px; font-weight: 700; color: HardwareGlobals.text-primary; }
+                        Text { text: "Bold 20px: ABC abc 0123"; font-size: 20px; font-weight: 700; color: HardwareGlobals.dark-mode ? #eeeeee : #111111; }
+                        Text { text: "Semi 18px: ABC abc 0123"; font-size: 18px; font-weight: 600; color: HardwareGlobals.dark-mode ? #dddddd : #222222; }
+                        Text { text: "Regular 16px: ABC abc 012"; font-size: 16px; font-weight: 600; color: HardwareGlobals.dark-mode ? #cccccc : #333333; }
+                        Text { text: "Small 14px: ABC abc 0123456"; font-size: 14px; font-weight: 600; color: HardwareGlobals.dark-mode ? #bbbbbb : #555555; }
+                        Text { text: "Tiny 12px: The quick brown fox"; font-size: 12px; font-weight: 600; color: HardwareGlobals.dark-mode ? #aaaaaa : #666666; }
+
+                        Rectangle { vertical-stretch: 1; }
+
+                        HorizontalLayout {
+                            alignment: center;
+                            spacing: 12px;
+
+                            Text { text: "Aa"; font-size: 28px; font-weight: 700; color: HardwareGlobals.dark-mode ? #ff6666 : #cc0000; }
+                            Text { text: "Bb"; font-size: 28px; font-weight: 600; color: HardwareGlobals.dark-mode ? #66ff66 : #00aa00; }
+                            Text { text: "Cc"; font-size: 28px; font-weight: 700; color: HardwareGlobals.dark-mode ? #6666ff : #0000cc; }
+                            Text { text: "Dd"; font-size: 28px; font-weight: 600; color: HardwareGlobals.dark-mode ? #ffff66 : #aaaa00; }
+                            Text { text: "Ee"; font-size: 28px; font-weight: 700; color: HardwareGlobals.dark-mode ? #ff66ff : #aa00aa; }
+                        }
+                    }
+                }
+
+                // ====== PAGE 2: Animations ======
+                Rectangle {
+                    width: root.width;
+                    clip: true;
+
+                    VerticalLayout {
+                        padding: 10px;
+                        spacing: 10px;
+
+                        PageHeader { title: "Animations"; }
+
+                        Text {
+                            text: "Progress Bar";
+                            font-size: 15px;
+                            font-weight: 600;
+                            color: HardwareGlobals.text-secondary;
+                        }
+
+                        Rectangle {
+                            height: 24px;
+                            border-radius: 8px;
+                            background: HardwareGlobals.bar-bg;
+                            clip: true;
+
+                            Rectangle {
+                                width: HardwareGlobals.page == 2 ? parent.width * Math.mod(HardwareGlobals.tick, 100) / 100 : 0;
+                                height: 100%;
+                                background: HardwareGlobals.dark-mode ? #0066ff : #0055cc;
+                                animate width { duration: 300ms; easing: ease-in-out; }
+                            }
+                        }
+
+                        Text {
+                            text: "Color Cycle";
+                            font-size: 15px;
+                            font-weight: 600;
+                            color: HardwareGlobals.text-secondary;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 16px;
+                            alignment: center;
+
+                            Rectangle {
+                                width: 40px; height: 40px; border-radius: 20px;
+                                background: Math.mod(HardwareGlobals.tick, 6) == 0 ? #ff0000 : Math.mod(HardwareGlobals.tick, 6) == 1 ? #ff8800 : Math.mod(HardwareGlobals.tick, 6) == 2 ? #ffff00 : Math.mod(HardwareGlobals.tick, 6) == 3 ? #00cc00 : Math.mod(HardwareGlobals.tick, 6) == 4 ? #0088ff : #cc00ff;
+                                animate background { duration: 400ms; }
+                            }
+
+                            Rectangle {
+                                width: 40px; height: 40px; border-radius: 20px;
+                                background: Math.mod(HardwareGlobals.tick + 2, 6) == 0 ? #ff0000 : Math.mod(HardwareGlobals.tick + 2, 6) == 1 ? #ff8800 : Math.mod(HardwareGlobals.tick + 2, 6) == 2 ? #ffff00 : Math.mod(HardwareGlobals.tick + 2, 6) == 3 ? #00cc00 : Math.mod(HardwareGlobals.tick + 2, 6) == 4 ? #0088ff : #cc00ff;
+                                animate background { duration: 400ms; }
+                            }
+
+                            Rectangle {
+                                width: 40px; height: 40px; border-radius: 20px;
+                                background: Math.mod(HardwareGlobals.tick + 4, 6) == 0 ? #ff0000 : Math.mod(HardwareGlobals.tick + 4, 6) == 1 ? #ff8800 : Math.mod(HardwareGlobals.tick + 4, 6) == 2 ? #ffff00 : Math.mod(HardwareGlobals.tick + 4, 6) == 3 ? #00cc00 : Math.mod(HardwareGlobals.tick + 4, 6) == 4 ? #0088ff : #cc00ff;
+                                animate background { duration: 400ms; }
+                            }
+                        }
+
+                        Text {
+                            text: "Opacity Wave";
+                            font-size: 15px;
+                            font-weight: 600;
+                            color: HardwareGlobals.text-secondary;
+                        }
+
+                        HorizontalLayout {
+                            height: 28px;
+                            spacing: 6px;
+
+                            Rectangle {
+                                height: 100%;
+                                background: HardwareGlobals.dark-mode ? #4488ff : #0044cc;
+                                opacity: 1.0 - Math.abs((Math.mod(HardwareGlobals.tick, 24) - 12)) / 12.0;
+                            }
+
+                            Rectangle {
+                                height: 100%;
+                                background: HardwareGlobals.dark-mode ? #44dd66 : #008833;
+                                opacity: 1.0 - Math.abs((Math.mod(HardwareGlobals.tick + 6, 24) - 12)) / 12.0;
+                            }
+
+                            Rectangle {
+                                height: 100%;
+                                background: HardwareGlobals.dark-mode ? #ff6644 : #cc2200;
+                                opacity: 1.0 - Math.abs((Math.mod(HardwareGlobals.tick + 12, 24) - 12)) / 12.0;
+                            }
+
+                            Rectangle {
+                                height: 100%;
+                                background: HardwareGlobals.dark-mode ? #ffcc22 : #cc9900;
+                                opacity: 1.0 - Math.abs((Math.mod(HardwareGlobals.tick + 18, 24) - 12)) / 12.0;
+                            }
+                        }
+
+                        Rectangle { vertical-stretch: 1; }
+                    }
+                }
+
+                // ====== PAGE 3: Colors & Shapes ======
+                Rectangle {
+                    width: root.width;
+                    clip: true;
+
+                    VerticalLayout {
+                        padding: 10px;
+                        spacing: 8px;
+
+                        PageHeader { title: "Colors & Shapes"; }
+
+                        Text {
+                            text: "Color Palette";
+                            font-size: 15px;
+                            font-weight: 600;
+                            color: HardwareGlobals.text-secondary;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 4px;
+                            alignment: center;
+
+                            Rectangle { width: 34px; height: 34px; border-radius: 6px; background: #ff0000; border-width: 1px; border-color: HardwareGlobals.dark-mode ? #444444 : #bbbbbb; }
+                            Rectangle { width: 34px; height: 34px; border-radius: 6px; background: #ff8800; border-width: 1px; border-color: HardwareGlobals.dark-mode ? #444444 : #bbbbbb; }
+                            Rectangle { width: 34px; height: 34px; border-radius: 6px; background: #ffff00; border-width: 1px; border-color: HardwareGlobals.dark-mode ? #444444 : #bbbbbb; }
+                            Rectangle { width: 34px; height: 34px; border-radius: 6px; background: #00cc00; border-width: 1px; border-color: HardwareGlobals.dark-mode ? #444444 : #bbbbbb; }
+                            Rectangle { width: 34px; height: 34px; border-radius: 6px; background: #0088ff; border-width: 1px; border-color: HardwareGlobals.dark-mode ? #444444 : #bbbbbb; }
+                            Rectangle { width: 34px; height: 34px; border-radius: 6px; background: #0000ff; border-width: 1px; border-color: HardwareGlobals.dark-mode ? #444444 : #bbbbbb; }
+                            Rectangle { width: 34px; height: 34px; border-radius: 6px; background: #cc00ff; border-width: 1px; border-color: HardwareGlobals.dark-mode ? #444444 : #bbbbbb; }
+                            Rectangle { width: 34px; height: 34px; border-radius: 6px; background: #ffffff; border-width: 1px; border-color: HardwareGlobals.dark-mode ? #444444 : #bbbbbb; }
+                        }
+
+                        Text {
+                            text: "Border Radius";
+                            font-size: 15px;
+                            font-weight: 600;
+                            color: HardwareGlobals.text-secondary;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 10px;
+                            alignment: center;
+
+                            Rectangle { width: 50px; height: 50px; background: HardwareGlobals.dark-mode ? #0066ff : #0055cc; border-radius: 0px; }
+                            Rectangle { width: 50px; height: 50px; background: HardwareGlobals.dark-mode ? #0088ff : #0066dd; border-radius: 8px; }
+                            Rectangle { width: 50px; height: 50px; background: HardwareGlobals.dark-mode ? #00aaff : #0088ff; border-radius: 16px; }
+                            Rectangle { width: 50px; height: 50px; background: HardwareGlobals.dark-mode ? #00ccff : #00aaff; border-radius: 25px; }
+                        }
+
+                        Text {
+                            text: "Borders";
+                            font-size: 15px;
+                            font-weight: 600;
+                            color: HardwareGlobals.text-secondary;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: center;
+
+                            Rectangle { width: 80px; height: 40px; background: transparent; border-width: 1px; border-color: HardwareGlobals.text-primary; border-radius: 4px; }
+                            Rectangle { width: 80px; height: 40px; background: transparent; border-width: 2px; border-color: HardwareGlobals.dark-mode ? #ff4444 : #cc0000; border-radius: 4px; }
+                            Rectangle { width: 80px; height: 40px; background: HardwareGlobals.dark-mode ? #001a33 : #cce0ff; border-width: 2px; border-color: HardwareGlobals.dark-mode ? #0088ff : #0066cc; border-radius: 8px; }
+                        }
+
+                        Rectangle { vertical-stretch: 1; }
+                    }
+                }
+
+                // ====== PAGE 4: Gauges & Bars ======
+                Rectangle {
+                    width: root.width;
+                    clip: true;
+
+                    VerticalLayout {
+                        padding: 10px;
+                        spacing: 8px;
+
+                        PageHeader { title: "Gauges & Bars"; }
+
+                        GaugeBar {
+                            label-text: "CPU";
+                            fill-ratio: HardwareGlobals.page == 4 ? Math.mod(HardwareGlobals.tick, 100) / 100 : 0.0;
+                            fill-color: #ff4444;
+                        }
+
+                        GaugeBar {
+                            label-text: "MEM";
+                            fill-ratio: HardwareGlobals.page == 4 ? Math.mod(HardwareGlobals.tick + 30, 100) / 100 : 0.0;
+                            fill-color: #ffaa00;
+                        }
+
+                        GaugeBar {
+                            label-text: "NET";
+                            fill-ratio: HardwareGlobals.page == 4 ? Math.mod(HardwareGlobals.tick + 60, 100) / 100 : 0.0;
+                            fill-color: #00cc44;
+                        }
+
+                        GaugeBar {
+                            label-text: "DISK";
+                            fill-ratio: HardwareGlobals.page == 4 ? Math.mod(HardwareGlobals.tick + 45, 100) / 100 : 0.0;
+                            fill-color: #8844ff;
+                        }
+
+                        Rectangle { vertical-stretch: 1; }
+
+                        Text {
+                            text: "Stacked Bar";
+                            font-size: 15px;
+                            font-weight: 600;
+                            color: HardwareGlobals.text-secondary;
+                        }
+
+                        Rectangle {
+                            height: 28px;
+                            border-radius: 6px;
+                            clip: true;
+                            background: HardwareGlobals.bar-bg;
+
+                            HorizontalLayout {
+                                Rectangle { width: 25%; height: 100%; background: #ff4444; }
+                                Rectangle { width: 20%; height: 100%; background: #ffaa00; }
+                                Rectangle { width: 15%; height: 100%; background: #44cc44; }
+                                Rectangle { width: 10%; height: 100%; background: #4488ff; }
+                                Rectangle { width: 8%; height: 100%; background: #8844ff; }
+                            }
+                        }
+                    }
+                }
+
+                // ====== PAGE 5: Touch Demo ======
+                Rectangle {
+                    width: root.width;
+                    clip: true;
+
+                    VerticalLayout {
+                        padding: 10px;
+                        spacing: 8px;
+
+                        PageHeader { title: "Touch Demo"; }
+
+                        HorizontalLayout {
+                            spacing: 20px;
+
+                            VerticalLayout {
+                                spacing: 4px;
+                                Label { text: "Position:"; }
+                                Value { text: HardwareGlobals.touch-pos; font-size: 18px; }
+                            }
+
+                            VerticalLayout {
+                                spacing: 4px;
+                                Label { text: "Tap Count:"; }
+                                Value { text: HardwareGlobals.tap-count; font-size: 18px; }
+                            }
+                        }
+
+                        Card {
+                            vertical-stretch: 1;
+
+                            VerticalLayout {
+                                padding: 8px;
+                                alignment: center;
+
+                                Text {
+                                    text: "Touch anywhere on screen";
+                                    font-size: 16px;
+                                    font-weight: 600;
+                                    color: #888888;
+                                    horizontal-alignment: center;
+                                }
+
+                                Text {
+                                    text: HardwareGlobals.touch-pos != "idle" ? "●" : "○";
+                                    font-size: 32px;
+                                    color: HardwareGlobals.touch-pos != "idle"
+                                        ? #00ff88
+                                        : (HardwareGlobals.dark-mode ? #333344 : #cccccc);
+                                    horizontal-alignment: center;
+                                }
+
+                                Text {
+                                    text: HardwareGlobals.touch-pos != "idle" ? "TOUCHING" : "IDLE";
+                                    font-size: 20px;
+                                    font-weight: 700;
+                                    color: HardwareGlobals.touch-pos != "idle"
+                                        ? #00ff88
+                                        : HardwareGlobals.text-muted;
+                                    horizontal-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ====== PAGE 6: LED Control ======
+                Rectangle {
+                    width: root.width;
+                    clip: true;
+
+                    VerticalLayout {
+                        padding: 10px;
+                        spacing: 8px;
+
+                        PageHeader { title: "LED Control"; }
+
+                        HorizontalLayout {
+                            alignment: center;
+                            spacing: 12px;
+                            height: 60px;
+
+                            Rectangle {
+                                width: 48px;
+                                height: 48px;
+                                border-radius: 24px;
+                                border-width: 2px;
+                                border-color: HardwareGlobals.text-muted;
+                                background: HardwareGlobals.led-color == "RED" ? #ff0000 :
+                                            HardwareGlobals.led-color == "GREEN" ? #00ff00 :
+                                            HardwareGlobals.led-color == "BLUE" ? #0000ff :
+                                            HardwareGlobals.led-color == "YELLOW" ? #ffff00 :
+                                            HardwareGlobals.led-color == "CYAN" ? #00ffff :
+                                            HardwareGlobals.led-color == "MAGENTA" ? #ff00ff :
+                                            HardwareGlobals.led-color == "WHITE" ? #ffffff : #222222;
+                            }
+
+                            VerticalLayout {
+                                spacing: 2px;
+                                alignment: center;
+                                Text {
+                                    text: "Current:";
+                                    font-size: 14px;
+                                    color: #888888;
+                                }
+                                Text {
+                                    text: HardwareGlobals.led-color;
+                                    font-size: 24px;
+                                    font-weight: 700;
+                                    color: HardwareGlobals.led-color == "RED" ? #ff0000 :
+                                           HardwareGlobals.led-color == "GREEN" ? #00ff00 :
+                                           HardwareGlobals.led-color == "BLUE" ? #0000ff :
+                                           HardwareGlobals.led-color == "YELLOW" ? #ffff00 :
+                                           HardwareGlobals.led-color == "CYAN" ? #00ffff :
+                                           HardwareGlobals.led-color == "MAGENTA" ? #ff00ff :
+                                           HardwareGlobals.led-color == "WHITE" ? #ffffff :
+                                           HardwareGlobals.text-primary;
+                                }
+                            }
+                        }
+
+                        Text {
+                            text: "Tap a color to change the RGB LED:";
+                            font-size: 14px;
+                            font-weight: 600;
+                            color: HardwareGlobals.dark-mode ? #888888 : #777777;
+                        }
+
+                        HorizontalLayout {
+                            height: 40px;
+                            spacing: 6px;
+                            alignment: center;
+
+                            ColorButton { btn-color: #1a0a0a; color-name: "OFF"; selected: HardwareGlobals.led-color == "OFF"; }
+                            ColorButton { btn-color: #ff0000; color-name: "RED"; selected: HardwareGlobals.led-color == "RED"; }
+                            ColorButton { btn-color: #00ff00; color-name: "GREEN"; selected: HardwareGlobals.led-color == "GREEN"; }
+                            ColorButton { btn-color: #0000ff; color-name: "BLUE"; selected: HardwareGlobals.led-color == "BLUE"; }
+                        }
+
+                        HorizontalLayout {
+                            height: 40px;
+                            spacing: 6px;
+                            alignment: center;
+
+                            ColorButton { btn-color: #ffff00; color-name: "YELLOW"; selected: HardwareGlobals.led-color == "YELLOW"; }
+                            ColorButton { btn-color: #00ffff; color-name: "CYAN"; selected: HardwareGlobals.led-color == "CYAN"; }
+                            ColorButton { btn-color: #ff00ff; color-name: "MAGENTA"; selected: HardwareGlobals.led-color == "MAGENTA"; }
+                            ColorButton { btn-color: #ffffff; color-name: "WHITE"; selected: HardwareGlobals.led-color == "WHITE"; }
+                        }
+
+                        Rectangle { vertical-stretch: 1; }
+                    }
+                }
+            }
+        }
+
+        // ====== BOTTOM NAV BAR — non-interactive indicator dots ======
+        Rectangle {
+            height: 36px;
+            background: HardwareGlobals.nav-bg;
+
+            HorizontalLayout {
+                alignment: center;
+                spacing: 8px;
+                padding-top: 14px;
+
+                Rectangle { width: HardwareGlobals.page == 0 ? 18px : 8px; height: 8px; border-radius: 4px; background: HardwareGlobals.page == 0 ? HardwareGlobals.accent : HardwareGlobals.text-muted; animate width { duration: 200ms; easing: ease-out; } animate background { duration: 200ms; } }
+                Rectangle { width: HardwareGlobals.page == 1 ? 18px : 8px; height: 8px; border-radius: 4px; background: HardwareGlobals.page == 1 ? HardwareGlobals.accent : HardwareGlobals.text-muted; animate width { duration: 200ms; easing: ease-out; } animate background { duration: 200ms; } }
+                Rectangle { width: HardwareGlobals.page == 2 ? 18px : 8px; height: 8px; border-radius: 4px; background: HardwareGlobals.page == 2 ? HardwareGlobals.accent : HardwareGlobals.text-muted; animate width { duration: 200ms; easing: ease-out; } animate background { duration: 200ms; } }
+                Rectangle { width: HardwareGlobals.page == 3 ? 18px : 8px; height: 8px; border-radius: 4px; background: HardwareGlobals.page == 3 ? HardwareGlobals.accent : HardwareGlobals.text-muted; animate width { duration: 200ms; easing: ease-out; } animate background { duration: 200ms; } }
+                Rectangle { width: HardwareGlobals.page == 4 ? 18px : 8px; height: 8px; border-radius: 4px; background: HardwareGlobals.page == 4 ? HardwareGlobals.accent : HardwareGlobals.text-muted; animate width { duration: 200ms; easing: ease-out; } animate background { duration: 200ms; } }
+                Rectangle { width: HardwareGlobals.page == 5 ? 18px : 8px; height: 8px; border-radius: 4px; background: HardwareGlobals.page == 5 ? HardwareGlobals.accent : HardwareGlobals.text-muted; animate width { duration: 200ms; easing: ease-out; } animate background { duration: 200ms; } }
+                Rectangle { width: HardwareGlobals.page == 6 ? 18px : 8px; height: 8px; border-radius: 4px; background: HardwareGlobals.page == 6 ? HardwareGlobals.accent : HardwareGlobals.text-muted; animate width { duration: 200ms; easing: ease-out; } animate background { duration: 200ms; } }
+            }
+        }
+    }
+}
