@@ -1,5 +1,6 @@
 .vscode/
 .embuild/
+.sisyphus/
 target/
 Cargo.lock
 
